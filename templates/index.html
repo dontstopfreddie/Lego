@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEGO Sorting Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>LEGO Sorting Assistant</h1>
+        <p>Upload a photo of your LEGO pile and get an optimal sorting plan</p>
+    </header>
+
+    <main>
+        <section id="upload-section">
+            <div id="drop-zone">
+                <div id="drop-zone-content">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>Drag & drop a photo of your LEGO pile here</p>
+                    <p class="hint">or click to select a file</p>
+                </div>
+                <img id="preview" style="display:none" alt="Preview">
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </div>
+            <button id="analyze-btn" disabled>Analyze & Sort</button>
+        </section>
+
+        <section id="loading" style="display:none">
+            <div class="spinner"></div>
+            <p>Analyzing your LEGO pile...</p>
+            <p class="hint">This may take 10-20 seconds</p>
+        </section>
+
+        <section id="error-section" style="display:none">
+            <p id="error-message"></p>
+            <button id="retry-btn">Try Again</button>
+        </section>
+
+        <section id="results" style="display:none">
+            <div id="results-header">
+                <h2>Sorting Results</h2>
+                <p id="total-pieces"></p>
+                <p id="notes"></p>
+            </div>
+
+            <div id="sorting-plan">
+                <h3>Optimal Sorting Order</h3>
+                <ol id="plan-steps"></ol>
+            </div>
+
+            <h3>Pieces by Category</h3>
+            <div id="category-grid">
+                {% for cat in categories %}
+                <div class="category-card" id="card-{{ cat.id }}" data-id="{{ cat.id }}" style="display:none">
+                    <div class="category-header" style="background-color: {{ cat.color }}">
+                        <span class="category-number">#{{ cat.number }}</span>
+                        <span class="category-name">{{ cat.name }}</span>
+                        <span class="piece-count">0</span>
+                    </div>
+                    <div class="category-body">
+                        <ul class="piece-list"></ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button id="new-analysis-btn">Analyze Another Pile</button>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
