@@ -392,9 +392,16 @@ window.startAnalysis = async function() {
       lastUrl = uploadedPhotos[i].preview;
       const result = await model.generateContent([buildPrompt(), {inlineData:{mimeType:uploadedPhotos[i].file.type, data:b64}}]);
       let text = result.response.text();
-      const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if(m) text=m[1];
-      const parsed = JSON.parse(text);
+      // Strip markdown code fences if present
+      let jsonStr = text;
+      const m = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if(m) jsonStr = m[1];
+      // Also try to extract just the JSON object if there's surrounding text
+      if(!jsonStr.trim().startsWith("{")) {
+        const braceMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if(braceMatch) jsonStr = braceMatch[0];
+      }
+      const parsed = JSON.parse(jsonStr);
       const pieces = (parsed.pieces||[]).map((p,j)=>({
         id:`p_${Date.now()}_${i}_${j}`, part_name:p.part_name||"Unknown", part_num:String(p.part_num||""),
         color:p.color||"Unknown", quantity:Math.max(1,parseInt(p.quantity)||1),
