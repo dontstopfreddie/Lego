@@ -15,7 +15,7 @@ import {
 import { exportSpreadsheet, generateCatalogHTML } from "./services/exportService.js";
 
 const DEFAULT_SETTINGS = {
-  geminiKey: "AIzaSyCE19OF9fml7hry5Zg_hLaHEx0VnolRuu0",
+  geminiKey: "AIzaSyCM1wvsh7bJ8TX8AY0w5iOUsyMa4vArwQA",
   rebrickableKey: "cdecb1729a83aa2366b8344a3b573427",
   darkMode: false,
 };
