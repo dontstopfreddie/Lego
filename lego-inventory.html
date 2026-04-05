@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEGO Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:#f7f5f0;color:#333;min-height:100vh}
+body.dark{background:#1a1a2e;color:#e0e0e0}
+.app-header{background:#D32F2F;color:#fff;padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:100}
+.app-header h1{font-size:1.5rem;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:.5rem}
+.btn-icon{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:.25rem;border-radius:6px}
+.btn-icon:hover{background:rgba(255,255,255,.2)}
+main{max-width:1100px;margin:0 auto;padding:1.5rem 1rem}
+.view{display:none}.view.active{display:block}
+.btn-primary{background:#D32F2F;color:#fff;border:none;padding:.6rem 1.5rem;border-radius:10px;font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:#B71C1C;transform:translateY(-1px)}
+.btn-large{padding:.9rem 2rem;font-size:1.15rem}
+.btn-secondary{background:#FDD835;color:#333;border:none;padding:.6rem 1.5rem;border-radius:10px;font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s}
+.btn-secondary:hover{background:#FBC02D}
+.btn-danger-small{background:none;border:1px solid #ccc;color:#999;padding:.4rem 1rem;border-radius:8px;font-size:.85rem;font-family:inherit;cursor:pointer}
+.btn-danger-small:hover{border-color:#D32F2F;color:#D32F2F}
+.error-banner{background:#FFF3CD;border:1px solid #FFC107;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.error-banner button{background:none;border:none;font-size:1.2rem;cursor:pointer}
+
+/* Upload */
+.drop-zone{border:4px dashed #ccc;border-radius:20px;padding:3rem 2rem;cursor:pointer;transition:all .2s;background:#fff;min-height:250px;display:flex;align-items:center;justify-content:center;text-align:center}
+body.dark .drop-zone{background:#16213e;border-color:#555}
+.drop-zone:hover,.drop-zone.dragover{border-color:#D32F2F;background:#fff5f5}
+.drop-icon{font-size:4rem;margin-bottom:.75rem}
+.drop-title{font-size:1.4rem;font-weight:800;margin-bottom:.25rem}
+.drop-hint{color:#aaa;font-size:1rem}
+.photo-grid-preview{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;width:100%}
+.photo-thumb{position:relative;width:120px;height:120px;border-radius:12px;overflow:hidden}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.remove-photo{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.add-more{width:120px;height:120px;border:3px dashed #ccc;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#aaa;font-weight:700}
+
+/* Analyzing */
+.analyzing{text-align:center;padding:4rem 1rem}
+.spinner-large{width:64px;height:64px;border:5px solid #eee;border-top-color:#D32F2F;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.analyzing-text{font-size:1.3rem;font-weight:700}
+.analyzing-hint{color:#aaa;margin-top:.5rem}
+
+/* Dashboard */
+.dash-hero{text-align:center;margin-bottom:2rem;padding:1.5rem 0}
+.total-num{font-size:4rem;font-weight:900;color:#D32F2F}
+body.dark .total-num{color:#FF5252}
+.total-label{font-size:1.3rem;font-weight:700;color:#888;display:block}
+.dash-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+.category-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+.category-card{background:#fff;border-radius:14px;padding:1rem;border-top:5px solid;text-align:center;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+body.dark .category-card{background:#16213e}
+.category-card:hover{transform:translateY(-3px)}
+.category-card.empty{opacity:.5}
+.card-number{font-weight:900;font-size:.85rem;margin-bottom:.25rem}
+.card-icon{font-size:2rem;margin-bottom:.25rem}
+.card-name{font-weight:700;font-size:.95rem;margin-bottom:.5rem;line-height:1.2}
+.card-count{display:inline-block;color:#fff;font-weight:800;font-size:1.1rem;padding:.15rem .75rem;border-radius:20px;min-width:40px}
+.card-bar{height:6px;background:#eee;border-radius:3px;margin-top:.5rem;overflow:hidden}
+.card-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* Inventory Table */
+.inventory-table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);font-size:.9rem;margin-top:.75rem}
+body.dark .inventory-table{background:#16213e}
+.inventory-table th{background:#f0f0f0;padding:.6rem .75rem;text-align:left;font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px}
+body.dark .inventory-table th{background:#1a1a2e}
+.inventory-table td{padding:.5rem .75rem;border-bottom:1px solid #f0f0f0}
+body.dark .inventory-table td{border-color:#2a2a4e}
+.cat-dot{display:inline-block;color:#fff;font-size:.75rem;font-weight:700;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
+.mono{font-family:monospace;color:#888}
+.qty{font-weight:700}
+
+/* Review */
+.review-layout{display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;margin-bottom:1.5rem}
+@media(max-width:768px){.review-layout{grid-template-columns:1fr}}
+.review-photo{width:100%;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.review-notes{margin-top:.75rem;font-style:italic;color:#888;font-size:.9rem}
+.review-stats{display:flex;gap:1rem;margin-top:1rem}
+.stat-big{background:#fff;padding:.75rem 1.25rem;border-radius:10px;font-weight:800;font-size:1.1rem;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+body.dark .stat-big{background:#16213e}
+.review-hint{color:#aaa;font-size:.85rem;margin-bottom:1rem}
+.piece-list{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;max-height:60vh;overflow-y:auto}
+.piece-row{background:#fff;border-radius:10px;padding:.5rem .75rem;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+body.dark .piece-row{background:#16213e}
+.piece-row.low-conf{border-left:4px solid #FFC107}
+.piece-row-main{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.piece-row input,.piece-row select{border:1px solid #e0e0e0;border-radius:6px;padding:.35rem .5rem;font-size:.85rem;font-family:inherit;background:#fafafa}
+body.dark .piece-row input,body.dark .piece-row select{background:#1a1a2e;border-color:#444;color:#e0e0e0}
+.input-name{flex:2;min-width:120px}.input-num{width:70px}.input-color{flex:1;min-width:100px}.input-qty{width:55px;text-align:center}.input-cat{flex:1;min-width:130px}
+.btn-remove{background:none;border:none;color:#ccc;font-size:1.1rem;cursor:pointer;padding:.25rem}
+.btn-remove:hover{color:#D32F2F}
+.conf-badge{font-size:.75rem;color:#F57F17;margin-top:.25rem;font-weight:600}
+.review-actions{display:flex;gap:1rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid #eee}
+
+/* Catalog */
+.catalog-toolbar{display:flex;gap:1rem;margin-bottom:1.5rem;align-items:center}
+.catalog-page{background:#fff;border-radius:12px;padding:1.5rem;margin-bottom:2rem;box-shadow:0 1px 6px rgba(0,0,0,.08);break-inside:avoid}
+body.dark .catalog-page{background:#16213e}
+.catalog-header{display:flex;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:3px solid #333;margin-bottom:1.25rem}
+body.dark .catalog-header{border-color:#666}
+.catalog-cat-num{font-size:3rem;font-weight:900;line-height:1}
+.catalog-cat-name{font-size:1.5rem;font-weight:800}
+.catalog-cat-desc{font-size:.85rem;color:#888}
+.catalog-cat-count{margin-left:auto;font-size:1.2rem;font-weight:700;color:#888}
+.catalog-subcat-label{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:.5rem;margin-top:.75rem}
+.catalog-parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.catalog-cell{background:#f8f8f8;border:1px solid #e8e8e8;border-radius:8px;padding:8px;text-align:center;position:relative}
+body.dark .catalog-cell{background:#1a1a2e;border-color:#333}
+.catalog-qty{position:absolute;top:5px;left:5px;background:#333;color:#fff;font-size:.8rem;font-weight:800;padding:1px 6px;border-radius:4px}
+.catalog-img{width:70px;height:70px;object-fit:contain;display:block;margin:0 auto 5px}
+.catalog-no-img{width:70px;height:70px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#bbb;margin:0 auto 5px;text-align:center;padding:4px;line-height:1.2}
+body.dark .catalog-no-img{background:#2a2a4e}
+.catalog-part-num{font-size:.7rem;color:#aaa;font-family:monospace}
+.catalog-part-name{font-size:.75rem;font-weight:600;margin-top:2px;line-height:1.2}
+.catalog-page-total{text-align:right;color:#888;font-size:.9rem;font-weight:600;margin-top:1rem;padding-top:.75rem;border-top:1px solid #eee}
+
+/* Settings */
+.settings{max-width:500px}
+.settings-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+.settings-group{background:#fff;border-radius:12px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+body.dark .settings-group{background:#16213e}
+.settings-group label{display:block;font-weight:700;margin-bottom:.5rem}
+.settings-group input[type="password"],.settings-group input[type="text"]{width:100%;padding:.6rem;border:2px solid #e0e0e0;border-radius:8px;font-size:.95rem;font-family:monospace}
+body.dark .settings-group input{background:#1a1a2e;border-color:#444;color:#e0e0e0}
+.settings-group input:focus{border-color:#D32F2F;outline:none}
+.settings-hint{font-size:.8rem;color:#aaa;margin-top:.4rem}
+.toggle-label{display:flex!important;align-items:center;gap:.75rem;cursor:pointer}
+.toggle-label input{width:20px;height:20px;cursor:pointer}
+
+@media print{.no-print,.app-header,.error-banner{display:none!important}body{background:#fff}.catalog-page{box-shadow:none;margin-bottom:0;page-break-after:always}.catalog-page:last-child{page-break-after:auto}}
+@media(max-width:600px){.app-header h1{font-size:1.2rem}.category-grid{grid-template-columns:repeat(2,1fr);gap:.75rem}.total-num{font-size:3rem}.catalog-parts{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<header class="app-header">
+<h1 onclick="showView('dashboard')"><span style="font-size:1.8rem">🧱</span> LEGO Inventory</h1>
+<button class="btn-icon" onclick="showView('settings')">⚙️</button>
+</header>
+<main>
+<div id="error-banner" class="error-banner" style="display:none"><p id="error-msg"></p><button onclick="hideError()">✕</button></div>
+
+<!-- DASHBOARD -->
+<div id="view-dashboard" class="view active">
+<div class="dash-hero">
+<div><span class="total-num" id="grand-total">0</span><span class="total-label">LEGO pieces</span></div>
+<div class="dash-actions">
+<button class="btn-primary btn-large" onclick="showView('upload')">📸 Add Photos</button>
+<button class="btn-secondary" id="btn-export" onclick="doExport()" style="display:none">📊 Download Spreadsheet</button>
+<button class="btn-secondary" id="btn-catalog" onclick="showView('catalog')" style="display:none">📖 View Catalog</button>
+<button class="btn-danger-small" id="btn-clear" onclick="doClear()" style="display:none">Clear All</button>
+</div>
+</div>
+<div class="category-grid" id="cat-grid"></div>
+<div id="inv-table-wrap" style="display:none"><h3>All Pieces</h3><table class="inventory-table"><thead><tr><th>Cat</th><th>Part</th><th>Part #</th><th>Color</th><th>Qty</th></tr></thead><tbody id="inv-tbody"></tbody></table></div>
+</div>
+
+<!-- UPLOAD -->
+<div id="view-upload" class="view">
+<div style="text-align:center">
+<div class="drop-zone" id="drop-zone">
+<div id="drop-prompt"><div class="drop-icon">📸</div><p class="drop-title">Drop your LEGO photos here!</p><p class="drop-hint">or tap to select a file</p></div>
+<div id="preview-area" class="photo-grid-preview" style="display:none"></div>
+</div>
+<input type="file" id="file-input" accept="image/*" multiple capture="environment" hidden>
+<button class="btn-primary btn-large" id="btn-analyze" style="display:none;margin-top:1.5rem" onclick="startAnalysis()">Find My LEGO Pieces!</button>
+</div>
+</div>
+
+<!-- ANALYZING -->
+<div id="view-analyzing" class="view">
+<div class="analyzing"><div class="spinner-large"></div><p class="analyzing-text" id="progress-text">Analyzing...</p><p class="analyzing-hint">This may take 15-30 seconds per photo</p></div>
+</div>
+
+<!-- REVIEW -->
+<div id="view-review" class="view">
+<div class="review-layout">
+<div><img id="review-photo" class="review-photo" src="" alt=""><p id="review-notes" class="review-notes"></p><div class="review-stats"><div class="stat-big" id="review-types">0 types</div><div class="stat-big" id="review-total">0 pieces</div></div></div>
+<div><h3>Identified Pieces</h3><p class="review-hint">Edit, remove, or add pieces before saving</p><div class="piece-list" id="piece-list"></div><button class="btn-secondary" onclick="addManualPiece()">+ Add a Piece</button></div>
+</div>
+<div class="review-actions">
+<button class="btn-secondary" onclick="showView('dashboard')">Discard</button>
+<button class="btn-primary btn-large" onclick="saveToInventory()">Save to Inventory</button>
+</div>
+</div>
+
+<!-- CATALOG -->
+<div id="view-catalog" class="view">
+<div class="catalog-toolbar no-print"><button class="btn-secondary" onclick="showView('dashboard')">&larr; Back</button><button class="btn-primary" onclick="window.print()">🖨️ Print Catalog</button></div>
+<div id="catalog-content"></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="view-settings" class="view">
+<div class="settings">
+<div class="settings-header"><button class="btn-secondary" onclick="showView('dashboard')">&larr; Back</button><h2>Settings</h2></div>
+<div class="settings-group"><label>Google Gemini API Key</label><input type="password" id="set-gemini" placeholder="AIza..."><p class="settings-hint">Free from Google AI Studio — no credit card needed</p></div>
+<div class="settings-group"><label>Rebrickable API Key</label><input type="password" id="set-rebrickable" placeholder="Your Rebrickable API key"><p class="settings-hint">Free at rebrickable.com — used for part images</p></div>
+<div class="settings-group"><label class="toggle-label"><input type="checkbox" id="set-dark"><span>Dark Mode</span></label></div>
+<button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+</div>
+</div>
+</main>
+
+<script type="module">
+// ===== CATEGORIES =====
+const CATEGORIES = [
+  {id:1,name:"Large Plates",description:"Plates with more than 2 studs along every edge",subcategories:[],color:"#E53935",icon:"🟥"},
+  {id:2,name:"1x Plates",description:"Plates with 1 stud on the narrowest edge",subcategories:["Square studs","Round studs"],color:"#43A047",icon:"🟩"},
+  {id:3,name:"2x Plates",description:"Plates with 2 studs on the narrowest edge",subcategories:[],color:"#1E88E5",icon:"🟦"},
+  {id:4,name:"Small Bricks",description:"Bricks with up to 4 studs on top",subcategories:["Regular","Textured bricks"],color:"#FB8C00",icon:"🧱"},
+  {id:5,name:"Large Bricks",description:"Bricks with more than 4 studs on top",subcategories:["Regular","Tall bricks"],color:"#8E24AA",icon:"🟪"},
+  {id:6,name:"Tiles, Panels & Jumpers",description:"Flat smooth pieces, wall panels, offset plates",subcategories:["Tiles","Panels","Jumpers & dishes"],color:"#00ACC1",icon:"⬜"},
+  {id:7,name:"Slopes & Arches",description:"Angled and curved top pieces",subcategories:["Slopes & arches","Cheeses & graters"],color:"#F4511E",icon:"📐"},
+  {id:8,name:"SNOT, Cones & Barrels",description:"Studs-not-on-top, cones, barrels",subcategories:["SNOT","Cones","Barrels"],color:"#546E7A",icon:"🔶"},
+  {id:9,name:"Technical & Articulated",description:"Technic system pieces and connection hardware",subcategories:["Technic","Clips/hinges/rails/rods"],color:"#757575",icon:"⚙️"},
+  {id:10,name:"Minifigs",description:"Minifigure bodies and accessories",subcategories:["Parts/hair/hats/animals","Accessories"],color:"#FDD835",icon:"🧑"},
+  {id:11,name:"House, Garden & Decorated",description:"Architectural, natural, printed/stickered",subcategories:["Windows/doors/fences","Plants/flowers/trees","Printed & stickered"],color:"#66BB6A",icon:"🏠"},
+  {id:12,name:"Vehicles & Everything Else",description:"Vehicle parts and anything else",subcategories:["Car/helicopter/plane/boat","Wheels & tires","Miscellaneous"],color:"#D32F2F",icon:"🚗"}
+];
+
+// ===== STATE =====
+let inventory = {pieces:[], sessions:[]};
+let settings = {geminiKey:"AIzaSyCE19OF9fml7hry5Zg_hLaHEx0VnolRuu0", rebrickableKey:"cdecb1729a83aa2366b8344a3b573427", darkMode:false};
+let uploadedPhotos = [];
+let reviewPieces = [];
+let reviewPhotoUrl = "";
+
+// ===== INIT =====
+function init() {
+  try { const r=localStorage.getItem("lego_inventory"); if(r) inventory=JSON.parse(r); } catch{}
+  try { const r=localStorage.getItem("lego_settings"); if(r) settings={...settings,...JSON.parse(r)}; } catch{}
+  document.body.classList.toggle("dark", settings.darkMode);
+  document.getElementById("set-gemini").value = settings.geminiKey;
+  document.getElementById("set-rebrickable").value = settings.rebrickableKey;
+  document.getElementById("set-dark").checked = settings.darkMode;
+  setupUpload();
+  renderDashboard();
+}
+
+// ===== VIEWS =====
+window.showView = function(name) {
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.getElementById("view-"+name).classList.add("active");
+  if(name==="dashboard") renderDashboard();
+  if(name==="catalog") renderCatalog();
+  if(name==="upload") resetUpload();
+};
+
+// ===== ERROR =====
+window.hideError = function() { document.getElementById("error-banner").style.display="none"; };
+function showError(msg) { document.getElementById("error-msg").textContent=msg; document.getElementById("error-banner").style.display="flex"; }
+
+// ===== SETTINGS =====
+window.saveSettings = function() {
+  settings.geminiKey = document.getElementById("set-gemini").value;
+  settings.rebrickableKey = document.getElementById("set-rebrickable").value;
+  settings.darkMode = document.getElementById("set-dark").checked;
+  localStorage.setItem("lego_settings", JSON.stringify(settings));
+  document.body.classList.toggle("dark", settings.darkMode);
+  showView("dashboard");
+};
+
+// ===== INVENTORY =====
+function saveInv() { localStorage.setItem("lego_inventory", JSON.stringify(inventory)); }
+
+window.doClear = function() {
+  if(confirm("Clear all inventory data?")) { inventory={pieces:[],sessions:[]}; saveInv(); renderDashboard(); }
+};
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const pieces = inventory.pieces;
+  const gt = pieces.reduce((s,p)=>s+p.quantity,0);
+  document.getElementById("grand-total").textContent = gt;
+  document.getElementById("btn-export").style.display = gt>0?"":"none";
+  document.getElementById("btn-catalog").style.display = gt>0?"":"none";
+  document.getElementById("btn-clear").style.display = gt>0?"":"none";
+
+  const counts = {};
+  for(let i=1;i<=12;i++) counts[i]=0;
+  for(const p of pieces) counts[p.category_id]=(counts[p.category_id]||0)+p.quantity;
+
+  const grid = document.getElementById("cat-grid");
+  grid.innerHTML = CATEGORIES.map(c=>{
+    const cnt = counts[c.id]||0;
+    const barW = gt>0 ? Math.min(100, cnt/gt*500) : 0;
+    return `<div class="category-card ${cnt>0?'has-pieces':'empty'}" style="border-top-color:${c.color}">
+      <div class="card-number" style="color:${c.color}">#${c.id}</div>
+      <div class="card-icon">${c.icon}</div>
+      <div class="card-name">${c.name}</div>
+      <div class="card-count" style="background:${cnt>0?c.color:'#ddd'}">${cnt}</div>
+      ${cnt>0?`<div class="card-bar"><div class="card-bar-fill" style="width:${barW}%;background:${c.color}"></div></div>`:''}
+    </div>`;
+  }).join("");
+
+  const wrap = document.getElementById("inv-table-wrap");
+  const tbody = document.getElementById("inv-tbody");
+  if(pieces.length > 0) {
+    wrap.style.display = "block";
+    const sorted = [...pieces].sort((a,b)=>a.category_id-b.category_id||(a.part_num||"").localeCompare(b.part_num||""));
+    tbody.innerHTML = sorted.map(p=>{
+      const cat = CATEGORIES.find(c=>c.id===p.category_id);
+      return `<tr><td><span class="cat-dot" style="background:${cat?.color||'#888'}">${p.category_id}</span></td><td>${p.part_name}</td><td class="mono">${p.part_num||'—'}</td><td>${p.color}</td><td class="qty">${p.quantity}</td></tr>`;
+    }).join("");
+  } else { wrap.style.display="none"; }
+}
+
+// ===== UPLOAD =====
+function setupUpload() {
+  const dz = document.getElementById("drop-zone");
+  const fi = document.getElementById("file-input");
+  dz.addEventListener("click", ()=>fi.click());
+  dz.addEventListener("dragover", e=>{e.preventDefault();dz.classList.add("dragover")});
+  dz.addEventListener("dragleave", ()=>dz.classList.remove("dragover"));
+  dz.addEventListener("drop", e=>{e.preventDefault();dz.classList.remove("dragover");handleFiles(e.dataTransfer.files)});
+  fi.addEventListener("change", ()=>handleFiles(fi.files));
+}
+
+function resetUpload() {
+  uploadedPhotos=[];
+  document.getElementById("drop-prompt").style.display="block";
+  document.getElementById("preview-area").style.display="none";
+  document.getElementById("preview-area").innerHTML="";
+  document.getElementById("btn-analyze").style.display="none";
+  document.getElementById("file-input").value="";
+}
+
+function handleFiles(files) {
+  for(const f of files) {
+    if(!f.type.startsWith("image/")) continue;
+    uploadedPhotos.push({file:f, preview:URL.createObjectURL(f), name:f.name});
+  }
+  if(uploadedPhotos.length===0) return;
+  document.getElementById("drop-prompt").style.display="none";
+  const area = document.getElementById("preview-area");
+  area.style.display="flex";
+  area.innerHTML = uploadedPhotos.map((_,i)=>`<div class="photo-thumb"><img src="${uploadedPhotos[i].preview}"><button class="remove-photo" onclick="event.stopPropagation();removePhoto(${i})">✕</button></div>`).join("") + `<div class="add-more"><span>+ Add more</span></div>`;
+  document.getElementById("btn-analyze").style.display="block";
+  document.getElementById("btn-analyze").textContent = `Find My LEGO Pieces! (${uploadedPhotos.length} photo${uploadedPhotos.length>1?'s':''})`;
+}
+window.removePhoto = function(i) {
+  uploadedPhotos.splice(i,1);
+  if(uploadedPhotos.length===0) resetUpload();
+  else handleFiles([]);
+};
+
+// ===== GEMINI ANALYSIS =====
+function fileToBase64(file) {
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file)});
+}
+
+function buildPrompt() {
+  const catList = CATEGORIES.map(c=>`${c.id}. ${c.name}: ${c.description}${c.subcategories.length?'. Subcategories: '+c.subcategories.join(', '):''}`).join("\n");
+  return `You are a LEGO brick identification expert. Analyze this photo of loose LEGO pieces.
+
+For EVERY visible LEGO piece, identify:
+1. Part name (e.g., "Brick 2x4", "Plate 1x6", "Slope 45 2x1")
+2. Likely LEGO part number (e.g., 3001 for Brick 2x4, 3666 for Plate 1x6). Be as accurate as possible.
+3. Color using official LEGO color names (e.g., "Bright Red", "Dark Bluish Gray", "White", "Black")
+4. Quantity — count how many of that exact part+color combination you see
+5. Category number (1-12):
+${catList}
+6. Subcategory (if applicable)
+
+Count EVERY piece you can see, even partially hidden ones. Use real LEGO part numbers.
+Distinguish between plates (1/3 brick height), bricks (full height), and tiles (smooth top).
+Group identical part+color combinations and sum the quantity.
+
+Respond with ONLY valid JSON (no markdown, no code blocks):
+{"pieces":[{"part_name":"Brick 2x4","part_num":"3001","color":"Bright Red","quantity":3,"category_id":5,"subcategory":"Regular","confidence":"high"}],"total_count":0,"notes":"observations"}`;
+}
+
+window.startAnalysis = async function() {
+  showView("analyzing");
+  try {
+    const {GoogleGenerativeAI} = await import("https://esm.run/@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(settings.geminiKey);
+    const model = genAI.getGenerativeModel({model:"gemini-2.5-flash"});
+
+    let allPieces = [];
+    let lastNotes = "";
+    let lastUrl = "";
+
+    for(let i=0; i<uploadedPhotos.length; i++) {
+      document.getElementById("progress-text").textContent = `Analyzing photo ${i+1} of ${uploadedPhotos.length}...`;
+      const b64 = await fileToBase64(uploadedPhotos[i].file);
+      lastUrl = uploadedPhotos[i].preview;
+      const result = await model.generateContent([buildPrompt(), {inlineData:{mimeType:uploadedPhotos[i].file.type, data:b64}}]);
+      let text = result.response.text();
+      const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if(m) text=m[1];
+      const parsed = JSON.parse(text);
+      const pieces = (parsed.pieces||[]).map((p,j)=>({
+        id:`p_${Date.now()}_${i}_${j}`, part_name:p.part_name||"Unknown", part_num:String(p.part_num||""),
+        color:p.color||"Unknown", quantity:Math.max(1,parseInt(p.quantity)||1),
+        category_id:parseInt(p.category_id)||12, subcategory:p.subcategory||"",
+        confidence:p.confidence||"medium", img_url:null, photo_source:uploadedPhotos[i].name
+      }));
+      allPieces = [...allPieces, ...pieces];
+      lastNotes = parsed.notes||"";
+    }
+
+    // Rebrickable enrichment
+    if(settings.rebrickableKey) {
+      document.getElementById("progress-text").textContent = "Looking up part images...";
+      const uniqueNums = [...new Set(allPieces.map(p=>p.part_num).filter(Boolean))];
+      const imgMap = {};
+      for(let i=0; i<uniqueNums.length; i+=5) {
+        const batch = uniqueNums.slice(i,i+5);
+        const results = await Promise.allSettled(batch.map(async num=>{
+          const res = await fetch(`https://rebrickable.com/api/v3/lego/parts/${num}/?key=${settings.rebrickableKey}`);
+          if(!res.ok) return null;
+          const d = await res.json();
+          return {num, img:d.part_img_url, name:d.name};
+        }));
+        for(const r of results) if(r.status==="fulfilled"&&r.value) imgMap[r.value.num]=r.value;
+        if(i+5<uniqueNums.length) await new Promise(r=>setTimeout(r,200));
+      }
+      allPieces = allPieces.map(p=>{const m=imgMap[p.part_num]; return m?{...p, img_url:m.img||p.img_url, part_name:m.name||p.part_name}:p;});
+    }
+
+    reviewPieces = allPieces;
+    reviewPhotoUrl = lastUrl;
+    showView("review");
+    renderReview(lastNotes);
+  } catch(e) {
+    showError(e.message);
+    showView("upload");
+  }
+};
+// ===== REVIEW =====
+function renderReview(notes) {
+  document.getElementById("review-photo").src = reviewPhotoUrl;
+  document.getElementById("review-notes").textContent = notes||"";
+  updateReviewStats();
+  renderPieceList();
+}
+
+function updateReviewStats() {
+  const total = reviewPieces.reduce((s,p)=>s+(parseInt(p.quantity)||0),0);
+  document.getElementById("review-types").textContent = reviewPieces.length+" types";
+  document.getElementById("review-total").textContent = total+" pieces";
+}
+
+function renderPieceList() {
+  const catOptions = CATEGORIES.map(c=>`<option value="${c.id}">#${c.id} ${c.name}</option>`).join("");
+  document.getElementById("piece-list").innerHTML = reviewPieces.map((p,i)=>`
+    <div class="piece-row ${p.confidence==='low'?'low-conf':''}">
+      <div class="piece-row-main">
+        <input class="input-name" value="${esc(p.part_name)}" onchange="updateRP(${i},'part_name',this.value)" placeholder="Part name">
+        <input class="input-num" value="${esc(p.part_num)}" onchange="updateRP(${i},'part_num',this.value)" placeholder="#">
+        <input class="input-color" value="${esc(p.color)}" onchange="updateRP(${i},'color',this.value)" placeholder="Color">
+        <input class="input-qty" type="number" min="1" value="${p.quantity}" onchange="updateRP(${i},'quantity',parseInt(this.value)||1)">
+        <select class="input-cat" onchange="updateRP(${i},'category_id',parseInt(this.value))">${catOptions.replace(`value="${p.category_id}"`,`value="${p.category_id}" selected`)}</select>
+        <button class="btn-remove" onclick="removeRP(${i})">✕</button>
+      </div>
+      ${p.confidence==='low'?'<div class="conf-badge">Low confidence — please verify</div>':''}
+    </div>`).join("");
+}
+
+function esc(s) { return (s||"").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+window.updateRP = function(i,field,val) { reviewPieces[i][field]=val; updateReviewStats(); };
+window.removeRP = function(i) { reviewPieces.splice(i,1); renderPieceList(); updateReviewStats(); };
+
+window.addManualPiece = function() {
+  reviewPieces.push({id:`manual_${Date.now()}`,part_name:"",part_num:"",color:"",quantity:1,category_id:12,subcategory:"",confidence:"manual",img_url:null,photo_source:"manual"});
+  renderPieceList();
+  updateReviewStats();
+};
+
+window.saveToInventory = function() {
+  const sessionId = `session_${Date.now()}`;
+  const tagged = reviewPieces.map(p=>({...p, session_id:sessionId, added_at:new Date().toISOString()}));
+  for(const np of tagged) {
+    const ex = inventory.pieces.find(p=>p.part_num===np.part_num && p.color===np.color && np.part_num);
+    if(ex) { ex.quantity+=np.quantity; if(np.img_url&&!ex.img_url) ex.img_url=np.img_url; }
+    else inventory.pieces.push(np);
+  }
+  inventory.sessions.push({id:sessionId, count:tagged.reduce((s,p)=>s+p.quantity,0), date:new Date().toISOString()});
+  saveInv();
+  reviewPieces=[];
+  showView("dashboard");
+};
+
+// ===== EXPORT SPREADSHEET =====
+window.doExport = function() {
+  const pieces = inventory.pieces;
+  const sorted = [...pieces].sort((a,b)=>a.category_id-b.category_id||(a.part_num||"").localeCompare(b.part_num||""));
+  const rows = [];
+  let curCat=null, catTotal=0;
+  for(const p of sorted) {
+    if(curCat!==null && curCat!==p.category_id) {
+      const cat=CATEGORIES.find(c=>c.id===curCat);
+      rows.push({"Category #":"","Category Name":`SUBTOTAL: ${cat?.name||""}`,"Subcategory":"","Part Number":"","Part Name":"","Color":"","Quantity":catTotal,"Photo Source":""});
+      catTotal=0;
+    }
+    curCat=p.category_id;
+    const cat=CATEGORIES.find(c=>c.id===p.category_id);
+    rows.push({"Category #":p.category_id,"Category Name":cat?.name||"","Subcategory":p.subcategory||"","Part Number":p.part_num||"","Part Name":p.part_name||"","Color":p.color||"","Quantity":p.quantity,"Photo Source":p.photo_source||""});
+    catTotal+=p.quantity;
+  }
+  if(curCat!==null) {
+    const cat=CATEGORIES.find(c=>c.id===curCat);
+    rows.push({"Category #":"","Category Name":`SUBTOTAL: ${cat?.name||""}`,"Subcategory":"","Part Number":"","Part Name":"","Color":"","Quantity":catTotal,"Photo Source":""});
+  }
+  rows.push({"Category #":"","Category Name":"GRAND TOTAL","Subcategory":"","Part Number":"","Part Name":"","Color":"","Quantity":pieces.reduce((s,p)=>s+p.quantity,0),"Photo Source":""});
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+  ws["!cols"]=[{wch:12},{wch:30},{wch:25},{wch:14},{wch:30},{wch:22},{wch:10},{wch:20}];
+  XLSX.writeFile(wb, "lego-inventory.xlsx");
+};
+
+// ===== CATALOG =====
+function renderCatalog() {
+  const pieces = inventory.pieces;
+  const content = document.getElementById("catalog-content");
+  let html = "";
+
+  CATEGORIES.forEach(cat=>{
+    const catPieces = pieces.filter(p=>p.category_id===cat.id);
+    if(catPieces.length===0) return;
+    const shapeMap = {};
+    for(const p of catPieces) {
+      const key = p.part_num||p.part_name;
+      if(!shapeMap[key]) shapeMap[key]={...p, total_qty:0, colors:{}};
+      shapeMap[key].total_qty += p.quantity;
+      shapeMap[key].colors[p.color] = (shapeMap[key].colors[p.color]||0)+p.quantity;
+      if(p.img_url&&!shapeMap[key].img_url) shapeMap[key].img_url=p.img_url;
+    }
+    const shapes = Object.values(shapeMap);
+    const catTotal = shapes.reduce((s,p)=>s+p.total_qty,0);
+
+    const subGroups = {};
+    for(const s of shapes) { const sub=s.subcategory||"General"; if(!subGroups[sub]) subGroups[sub]=[]; subGroups[sub].push(s); }
+
+    html += `<div class="catalog-page">
+      <div class="catalog-header">
+        <div class="catalog-cat-num" style="color:${cat.color}">#${cat.id}</div>
+        <div><div class="catalog-cat-name">${cat.name}</div><div class="catalog-cat-desc">${cat.description}</div></div>
+        <div class="catalog-cat-count">${catTotal} pieces</div>
+      </div>`;
+
+    for(const [subName, subPieces] of Object.entries(subGroups)) {
+      if(cat.subcategories.length>0 && Object.keys(subGroups).length>1)
+        html += `<div class="catalog-subcat-label">${subName}</div>`;
+      html += `<div class="catalog-parts">`;
+      for(const p of subPieces) {
+        const imgH = p.img_url ? `<img src="${p.img_url}" class="catalog-img" loading="lazy">` : `<div class="catalog-no-img">${(p.part_name||"").slice(0,18)}</div>`;
+        html += `<div class="catalog-cell"><div class="catalog-qty">${p.total_qty}x</div>${imgH}<div class="catalog-part-num">${p.part_num||"?"}</div><div class="catalog-part-name">${p.part_name}</div></div>`;
+      }
+      html += `</div>`;
+    }
+    html += `<div class="catalog-page-total">Bin #${cat.id} — ${catTotal} pieces total</div></div>`;
+  });
+
+  content.innerHTML = html || '<p style="text-align:center;color:#aaa;padding:3rem">No pieces in inventory yet. Add some photos first!</p>';
+}
+
+// ===== BOOT =====
+init();
+</script>
+</body>
+</html>
